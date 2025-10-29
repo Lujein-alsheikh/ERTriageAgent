@@ -65,6 +65,14 @@ for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
+# --- Apply any pending field fills before widgets are instantiated ---
+if isinstance(st.session_state.get("_pending_fill"), dict):
+    pending = st.session_state["_pending_fill"]
+    for key in ["patient_id", "age", "chief_complaint_and_reported_symptoms"]:
+        if key in pending and pending[key] is not None:
+            st.session_state[key] = pending[key]
+    del st.session_state["_pending_fill"]
+
 # --- Inputs bound to keys ---
 st.text_input("Patient ID", key="patient_id")
 st.number_input("Age", min_value=0, max_value=120, step=1, key="age")
@@ -120,10 +128,8 @@ with col2:
                 if patient_id:
                     print("patient id extracted!")
                     st.success(f"✅ Received simulated patient data from n8n! (Status: {response.status_code})")
-                    # Populate bound fields if available
-                    for key in ["patient_id", "age", "arrival_time", "chief_complaint_and_reported_symptoms"]:
-                        if key in parsed and parsed[key] is not None:
-                            st.session_state[key] = parsed[key]
+                    # Defer populating fields until before widgets instantiate
+                    st.session_state["_pending_fill"] = parsed
 
         except requests.exceptions.RequestException as e:
             st.error(f"❌ Failed to send simulation request: {e}")
@@ -136,10 +142,4 @@ with col3:
                 del st.session_state[key]
         st.rerun()
 
-                # for key in ["patient_id", "age", "arrival_time", "chief_complaint_and_reported_symptoms"]:
-                #     if key in simulated_data:
-                #         st.session_state[key] = simulated_data[key]
-
-                # If patient_id is non-empty (which means that the data record is not empty.)
-                # if bool(simulated_data.get("patient_id")):
-                #     st.success(f"✅ Received simulated patient data from n8n! (Status: {response.status_code})")
+        
