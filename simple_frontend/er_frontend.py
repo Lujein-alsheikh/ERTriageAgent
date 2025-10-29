@@ -70,8 +70,20 @@ if isinstance(st.session_state.get("_pending_fill"), dict):
     pending = st.session_state["_pending_fill"]
     for key in ["patient_id", "age", "chief_complaint_and_reported_symptoms"]:
         if key in pending and pending[key] is not None:
-            st.session_state[key] = pending[key]
+            value = pending[key]
+            # Coerce types to match widget expectations
+            if key == "patient_id":
+                st.session_state[key] = str(value)
+            elif key == "age":
+                try:
+                    st.session_state[key] = int(value)
+                except Exception:
+                    pass
+            elif key == "chief_complaint_and_reported_symptoms":
+                st.session_state[key] = str(value)
     del st.session_state["_pending_fill"]
+
+# (Notifications are rendered under the Simulate button)
 
 # --- Inputs bound to keys ---
 st.text_input("Patient ID", key="patient_id")
@@ -113,6 +125,7 @@ with col2:
             response = requests.post(API_URL, json=empty_data)
             response.raise_for_status()
             st.success(f"✅ Simulated data requested! (Status: {response.status_code})")
+            st.session_state.setdefault("_notifications", []).append(("success", f"✅ Simulated data requested! (Status: {response.status_code})"))
 
             # Parse and apply simulated data
             try:
@@ -128,11 +141,26 @@ with col2:
                 if patient_id:
                     print("patient id extracted!")
                     st.success(f"✅ Received simulated patient data from n8n! (Status: {response.status_code})")
-                    # Defer populating fields until before widgets instantiate
+                    st.session_state.setdefault("_notifications", []).append(("success", f"✅ Received simulated patient data from n8n! (Status: {response.status_code})"))
+                    # Defer populating fields until before widgets instantiate, then rerun so values appear
                     st.session_state["_pending_fill"] = parsed
+                    st.rerun()
 
         except requests.exceptions.RequestException as e:
             st.error(f"❌ Failed to send simulation request: {e}")
+
+    # --- Render any persisted notifications under the Simulate button ---
+    notifications = st.session_state.get("_notifications", [])
+    if notifications:
+        for level, msg in notifications:
+            if level == "success":
+                st.success(msg)
+            elif level == "error":
+                st.error(msg)
+            elif level == "warning":
+                st.warning(msg)
+            else:
+                st.info(msg)
 
 # --- Refresh button ---
 with col3:
@@ -140,6 +168,9 @@ with col3:
         for key in list(defaults.keys()):
             if key in st.session_state:
                 del st.session_state[key]
+        # Clear notifications as well
+        if "_notifications" in st.session_state:
+            del st.session_state["_notifications"]
         st.rerun()
 
         
