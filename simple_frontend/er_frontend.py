@@ -4,7 +4,7 @@ import requests
 import datetime
 
 # ---- CONFIG ----
-API_URL = "https://lujein.app.n8n.cloud/webhook-test/reception"  
+API_URL = "https://lujein.app.n8n.cloud/webhook/reception"  
 
 st.set_page_config(page_title="ER Receptionist Prototype", page_icon="🏥", layout="centered")
 st.title("🏥 ER Receptionist Interface")
@@ -59,7 +59,6 @@ with col2:
         try:
             response = requests.post(API_URL, json=empty_data)
             response.raise_for_status()
-            # Show that the simulation request was accepted by n8n
             st.success(f"✅ Simulated data requested! (Status: {response.status_code})")
 
             # Parse and apply simulated data
@@ -72,14 +71,8 @@ with col2:
                     if key in simulated_data:
                         st.session_state[key] = simulated_data[key]
 
-                # Only show success if any of the fields are non-empty
-                has_non_empty = any([
-                    bool(simulated_data.get("patient_id")),
-                    bool(simulated_data.get("age")),
-                    bool(simulated_data.get("arrival_time")),
-                    bool(simulated_data.get("chief_complaint_and_reported_symptoms")),
-                ])
-                if has_non_empty:
+                # If patient_id is non-empty (which means that the data record is not empty.)
+                if bool(simulated_data.get("patient_id")):
                     st.success(f"✅ Received simulated patient data from n8n! (Status: {response.status_code})")
         except requests.exceptions.RequestException as e:
             st.error(f"❌ Failed to send simulation request: {e}")
@@ -94,8 +87,6 @@ with col3:
 
 
 
-       #    st.success(f"✅ Simulated data requested! (Status: {response.status_code})")
-
        # st.json(empty_data) # Renders the empty_data dict as formatted JSON in the Streamlit app (i.e., shows that JSON on the screen).
 
             # simulated_data = response.json()
@@ -108,9 +99,4 @@ with col3:
             # st.success("✅ Received simulated patient data from n8n!")
             # st.json(simulated_data)
 
-                        
-            # # ✅ Clear fields safely
-            # for key in list(defaults.keys()):
-            #     if key in st.session_state:
-            #         del st.session_state[key]
-            # st.rerun()
+         
