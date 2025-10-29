@@ -26,7 +26,7 @@ st.number_input("Age", min_value=0, max_value=120, step=1, key="age")
 # st.time_input("Time of Arrival", value=st.session_state.arrival_time, key="arrival_time")
 st.text_area("Chief Complaint and Reported Symptoms", key="chief_complaint_and_reported_symptoms")
 
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
 
 # --- Submit button ---
 with col1:
@@ -42,12 +42,6 @@ with col1:
             response = requests.post(API_URL, json=data)
             response.raise_for_status()
             st.success(f"✅ Data sent successfully! (Status: {response.status_code})")
-
-            # ✅ Clear fields by deleting session keys and rerunning
-            for key in list(defaults.keys()):
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.rerun()
 
         except requests.exceptions.RequestException as e:
             st.error(f"❌ Failed to send data: {e}")
@@ -65,11 +59,12 @@ with col2:
         try:
             response = requests.post(API_URL, json=empty_data)
             response.raise_for_status()
+            # Show that the simulation request was accepted by n8n
+            st.success(f"✅ Simulated data requested! (Status: {response.status_code})")
 
             # Parse and apply simulated data
             try:
                 simulated_data = response.json()
-                print(simulated_data)
             except ValueError:
                 st.error("❌ Failed to parse JSON from simulation response.")
             else:
@@ -77,10 +72,25 @@ with col2:
                     if key in simulated_data:
                         st.session_state[key] = simulated_data[key]
 
-                st.success(f"✅ Received simulated patient data from n8n! (Status: {response.status_code})")
-                st.rerun()
+                # Only show success if any of the fields are non-empty
+                has_non_empty = any([
+                    bool(simulated_data.get("patient_id")),
+                    bool(simulated_data.get("age")),
+                    bool(simulated_data.get("arrival_time")),
+                    bool(simulated_data.get("chief_complaint_and_reported_symptoms")),
+                ])
+                if has_non_empty:
+                    st.success(f"✅ Received simulated patient data from n8n! (Status: {response.status_code})")
         except requests.exceptions.RequestException as e:
             st.error(f"❌ Failed to send simulation request: {e}")
+
+# --- Refresh button ---
+with col3:
+    if st.button("Refresh"):
+        for key in list(defaults.keys()):
+            if key in st.session_state:
+                del st.session_state[key]
+        st.rerun()
 
 
 
