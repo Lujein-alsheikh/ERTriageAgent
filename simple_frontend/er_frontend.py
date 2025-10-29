@@ -2,6 +2,51 @@ from pandas.core.missing import F
 import streamlit as st
 import requests
 import datetime
+import json
+import re
+import ast
+
+
+def extract_patient_data(data):
+    """
+    Parses the specific n8n output format like:
+    [{'output': '[{\'output\': \'{\\n  "patient_id": 123456, ... }\'}]'}]
+
+    Returns a clean Python dict, e.g.:
+    {'patient_id': 123456, 'age': 29, ...}
+    """
+    try:
+        # 1️⃣ Outer list
+        if isinstance(data, list) and len(data) > 0:
+            data = data[0]
+        else:
+            raise ValueError("Unexpected data format (not a list).")
+
+        # 2️⃣ Get 'output' key (string containing list-like text)
+        output_str = data.get("output")
+        if not isinstance(output_str, str):
+            raise ValueError("Missing or invalid 'output' key.")
+
+        # 3️⃣ Convert the inner list-like string to a Python object
+        # Use ast.literal_eval because it's not valid JSON (single quotes)
+        inner_list = ast.literal_eval(output_str)
+        if not inner_list or not isinstance(inner_list, list):
+            raise ValueError("Inner 'output' is not a list.")
+
+        inner_dict = inner_list[0]
+        if not isinstance(inner_dict, dict) or "output" not in inner_dict:
+            raise ValueError("Inner list item missing 'output' key.")
+
+        # 4️⃣ Parse the final JSON string inside
+        patient_json_str = inner_dict["output"]
+        patient_data = json.loads(patient_json_str)
+
+        return patient_data
+
+    except Exception as e:
+        print(f"❌ Failed to parse patient data: {e}")
+        return {}
+
 
 # ---- CONFIG ----
 API_URL = "https://lujein.app.n8n.cloud/webhook/reception"  
@@ -64,16 +109,22 @@ with col2:
             # Parse and apply simulated data
             try:
                 simulated_data = response.json()
+                print(f"simulated data {simulated_data}")
             except ValueError:
                 st.error("❌ Failed to parse JSON from simulation response.")
             else:
-                for key in ["patient_id", "age", "arrival_time", "chief_complaint_and_reported_symptoms"]:
-                    if key in simulated_data:
-                        st.session_state[key] = simulated_data[key]
+                parsed = extract_patient_data(simulated_data)
+                print(f"parsing result: {parsed}")
+                patient_id = parsed.get("patient_id")
 
-                # If patient_id is non-empty (which means that the data record is not empty.)
-                if bool(simulated_data.get("patient_id")):
+                if patient_id:
+                    print("patient id extracted!")
                     st.success(f"✅ Received simulated patient data from n8n! (Status: {response.status_code})")
+                    # Populate bound fields if available
+                    for key in ["patient_id", "age", "arrival_time", "chief_complaint_and_reported_symptoms"]:
+                        if key in parsed and parsed[key] is not None:
+                            st.session_state[key] = parsed[key]
+
         except requests.exceptions.RequestException as e:
             st.error(f"❌ Failed to send simulation request: {e}")
 
@@ -85,18 +136,10 @@ with col3:
                 del st.session_state[key]
         st.rerun()
 
+                # for key in ["patient_id", "age", "arrival_time", "chief_complaint_and_reported_symptoms"]:
+                #     if key in simulated_data:
+                #         st.session_state[key] = simulated_data[key]
 
-
-       # st.json(empty_data) # Renders the empty_data dict as formatted JSON in the Streamlit app (i.e., shows that JSON on the screen).
-
-            # simulated_data = response.json()
-            # print(simulated_data)
-            
-            # for key in ["patient_id", "age", "arrival_time", "chief_complaint_and_reported_symptoms"]:
-            #     if key in simulated_data:
-            #         st.session_state[key] = simulated_data[key]
-
-            # st.success("✅ Received simulated patient data from n8n!")
-            # st.json(simulated_data)
-
-         
+                # If patient_id is non-empty (which means that the data record is not empty.)
+                # if bool(simulated_data.get("patient_id")):
+                #     st.success(f"✅ Received simulated patient data from n8n! (Status: {response.status_code})")
