@@ -68,7 +68,7 @@ for key, val in defaults.items():
 # --- Apply any pending field fills before widgets are instantiated ---
 if isinstance(st.session_state.get("_pending_fill"), dict):
     pending = st.session_state["_pending_fill"]
-    for key in ["patient_id", "age", "chief_complaint_and_reported_symptoms"]:
+    for key in ["patient_id", "age",  "chief_complaint_and_reported_symptoms"]:
         if key in pending and pending[key] is not None:
             value = pending[key]
             # Coerce types to match widget expectations
@@ -88,7 +88,7 @@ if isinstance(st.session_state.get("_pending_fill"), dict):
 # --- Inputs bound to keys ---
 st.text_input("Patient ID", key="patient_id")
 st.number_input("Age", min_value=0, max_value=120, step=1, key="age")
-# st.time_input("Time of Arrival", value=st.session_state.arrival_time, key="arrival_time")
+st.time_input("Time of Arrival", value=st.session_state.arrival_time, key="arrival_time")
 st.text_area("Chief Complaint and Reported Symptoms", key="chief_complaint_and_reported_symptoms")
 
 col1, col2, col3 = st.columns(3)
@@ -128,7 +128,6 @@ with col2:
         try:
             response = requests.post(API_URL, json=empty_data)
             response.raise_for_status()
-            # Optionally update the first message with status (keep existing notification simple)
 
             # Parse and apply simulated data
             try:
