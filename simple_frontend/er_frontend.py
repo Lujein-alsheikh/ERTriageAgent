@@ -121,11 +121,14 @@ with col2:
             "chief_complaint_and_reported_symptoms": "",
             "simulate": True,
         }
+        # Show request acknowledgment immediately
+        st.success("✅ Simulated data requested! (sending…)")
+        st.session_state.setdefault("_notifications", []).append(("success", "✅ Simulated data requested!"))
+
         try:
             response = requests.post(API_URL, json=empty_data)
             response.raise_for_status()
-            st.success(f"✅ Simulated data requested! (Status: {response.status_code})")
-            st.session_state.setdefault("_notifications", []).append(("success", f"✅ Simulated data requested! (Status: {response.status_code})"))
+            # Optionally update the first message with status (keep existing notification simple)
 
             # Parse and apply simulated data
             try:
