@@ -1,7 +1,6 @@
 from pandas.core.missing import F
 import streamlit as st
 import requests
-import random
 import datetime
 
 # ---- CONFIG ----
@@ -59,7 +58,7 @@ with col2:
         empty_data = {
             "patient_id": "",
             "age": 0,
-            "arrival_time": "",
+            "arrival_time": str(st.session_state.arrival_time),
             "chief_complaint_and_reported_symptoms": "",
             "simulate": True,
         }
@@ -67,24 +66,41 @@ with col2:
             response = requests.post(API_URL, json=empty_data)
             response.raise_for_status()
 
-            st.json(empty_data)
-            st.success(f"✅ Simulated data requested! (Status: {response.status_code})")
+            # Parse and apply simulated data
+            try:
+                simulated_data = response.json()
+                print(simulated_data)
+            except ValueError:
+                st.error("❌ Failed to parse JSON from simulation response.")
+            else:
+                for key in ["patient_id", "age", "arrival_time", "chief_complaint_and_reported_symptoms"]:
+                    if key in simulated_data:
+                        st.session_state[key] = simulated_data[key]
 
-            simulated_data = response.json()
-            for key in ["patient_id", "age", "arrival_time", "chief_complaint_and_reported_symptoms"]:
-                if key in simulated_data:
-                    st.session_state[key] = simulated_data[key]
-
-            st.success("✅ Received simulated patient data from n8n!")
-            st.json(simulated_data)
-
-            # ✅ Clear fields safely
-            for key in list(defaults.keys()):
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.rerun()
-
+                st.success(f"✅ Received simulated patient data from n8n! (Status: {response.status_code})")
+                st.rerun()
         except requests.exceptions.RequestException as e:
             st.error(f"❌ Failed to send simulation request: {e}")
 
-       
+
+
+       #    st.success(f"✅ Simulated data requested! (Status: {response.status_code})")
+
+       # st.json(empty_data) # Renders the empty_data dict as formatted JSON in the Streamlit app (i.e., shows that JSON on the screen).
+
+            # simulated_data = response.json()
+            # print(simulated_data)
+            
+            # for key in ["patient_id", "age", "arrival_time", "chief_complaint_and_reported_symptoms"]:
+            #     if key in simulated_data:
+            #         st.session_state[key] = simulated_data[key]
+
+            # st.success("✅ Received simulated patient data from n8n!")
+            # st.json(simulated_data)
+
+                        
+            # # ✅ Clear fields safely
+            # for key in list(defaults.keys()):
+            #     if key in st.session_state:
+            #         del st.session_state[key]
+            # st.rerun()
