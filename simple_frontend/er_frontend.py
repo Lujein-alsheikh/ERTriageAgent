@@ -88,7 +88,7 @@ if isinstance(st.session_state.get("_pending_fill"), dict):
 # --- Inputs bound to keys ---
 st.text_input("Patient ID", key="patient_id")
 st.number_input("Age", min_value=0, max_value=120, step=1, key="age")
-st.time_input("Time of Arrival", value=st.session_state.arrival_time, key="arrival_time")
+st.time_input("Time of Arrival",  key="arrival_time") # value=st.session_state.arrival_time,
 st.text_area("Chief Complaint and Reported Symptoms", key="chief_complaint_and_reported_symptoms")
 
 col1, col2, col3 = st.columns(3)
