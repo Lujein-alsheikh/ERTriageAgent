@@ -44,13 +44,59 @@ st.title("🚑 Nurse Interface")
 # Listening for data on http://localhost:8000/api/data
 
 
+def _handle_row_action(row_index: int):
+    try:
+        row = pd.DataFrame(data_store).iloc[row_index].to_dict()
+    except Exception:
+        row = {}
+    st.session_state["last_row_clicked"] = row
+
 # --- Display data in a table ---
 if data_store:
-    # print("data stor recognized")
     df = pd.DataFrame(data_store)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+
+    # Prefer a native button column if available
+    if hasattr(st, "data_editor") and hasattr(st, "column_config") and hasattr(st.column_config, "ButtonColumn"):
+        df_with_action = df.copy()
+        df_with_action["Action"] = "Open"
+
+        st.data_editor(
+            df_with_action,
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Action": st.column_config.ButtonColumn(
+                    label="Action",
+                    help="Perform action on this row",
+                    icon="➡️",
+                    on_click=_handle_row_action,
+                    args=None,
+                )
+            },
+            disabled=[c for c in df_with_action.columns if c != "Action"],
+            key="nurse_table_editor",
+        )
+
+        # Show feedback for last clicked row (optional)
+        if "last_row_clicked" in st.session_state and st.session_state["last_row_clicked"]:
+            st.success(f"Selected row: {st.session_state['last_row_clicked']}")
+    else:
+        # Fallback: render a lightweight table with a last-column button per row
+        # Header
+        header_cols = st.columns(len(df.columns) + 1)
+        for i, col_name in enumerate(df.columns):
+            header_cols[i].markdown(f"**{col_name}**")
+        header_cols[-1].markdown("**Confirm?**")
+
+        # Rows
+        for idx, row in df.iterrows():
+            row_cols = st.columns(len(df.columns) + 1)
+            for i, col_name in enumerate(df.columns):
+                row_cols[i].write(row[col_name])
+            if row_cols[-1].button("✅", key=f"row_action_{idx}"):
+                st.session_state["last_row_clicked"] = row.to_dict()
+                st.success(f"Selected row: {st.session_state['last_row_clicked']}")
 else:
-    # print("data not recognized!")
     st.info("No patients yet!")
 
 # --- Auto-refresh (poll for new data) ---
