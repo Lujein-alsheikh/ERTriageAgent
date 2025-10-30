@@ -46,11 +46,11 @@ st.title("🚑 Nurse Interface")
 
 # --- Display data in a table ---
 if data_store:
-    print("data stor recognized")
+    # print("data stor recognized")
     df = pd.DataFrame(data_store)
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, use_container_width=True, hide_index=True)
 else:
-    print("data not recognized!")
+    # print("data not recognized!")
     st.info("No patients yet!")
 
 # --- Auto-refresh (poll for new data) ---
