@@ -3,9 +3,20 @@ import threading
 import pandas as pd
 from fastapi import FastAPI, Request
 import uvicorn
+import time
 
-# --- Shared in-memory storage ---
-data_store = []
+# Must be the first Streamlit command
+st.set_page_config(page_title="Nurse Interface", page_icon="🚑", layout="centered")
+
+# Provide a single shared state across Streamlit reruns and the API thread
+@st.cache_resource
+def get_shared_state():
+    return {"data_store": []}
+
+shared_state = get_shared_state()
+
+# --- Shared in-memory storage (lives in shared_state) ---
+data_store = shared_state["data_store"]
 
 # --- FastAPI setup (for receiving data from n8n) ---
 api = FastAPI()
@@ -22,12 +33,12 @@ def run_api():
     """Run FastAPI in the background."""
     uvicorn.run(api, host="0.0.0.0", port=8000)
 
-# --- Run FastAPI in background thread ---
-thread = threading.Thread(target=run_api, daemon=True)
-thread.start()
+# --- Run FastAPI in background thread (only once) ---
+if "_api_thread" not in st.session_state:
+    st.session_state["_api_thread"] = threading.Thread(target=run_api, daemon=True)
+    st.session_state["_api_thread"].start()
 
 # --- Streamlit UI ---
-st.set_page_config(page_title="Nurse Interface", page_icon="🚑", layout="centered")
 st.title("🚑 Nurse Interface")
 
 # Listening for data on http://localhost:8000/api/data
@@ -41,3 +52,8 @@ if data_store:
 else:
     print("data not recognized!")
     st.info("No patients yet!")
+
+# --- Auto-refresh (poll for new data) ---
+# Always refresh every 2 seconds without user interaction
+time.sleep(2)
+st.rerun()
