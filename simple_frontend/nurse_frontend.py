@@ -22,6 +22,8 @@ def _noop(*args, **kwargs):
 # Track which rows have been confirmed (by index)
 if "confirmed_rows" not in st.session_state:
     st.session_state["confirmed_rows"] = []
+if "triage_override" not in st.session_state:
+    st.session_state["triage_override"] = {}
 
 # --- Configuration for confirm webhook ---
 # Prefer setting in .streamlit/secrets.toml as:
@@ -29,7 +31,7 @@ if "confirmed_rows" not in st.session_state:
 # CONFIRM_WEBHOOK_URL = st.secrets.get("N8N_CONFIRM_WEBHOOK_URL", "")
 # if not CONFIRM_WEBHOOK_URL:
     # Optional: allow hardcoding here if secrets not used
-CONFIRM_WEBHOOK_URL = "https://lujein.app.n8n.cloud/webhook-test/triage-confirmation"
+CONFIRM_WEBHOOK_URL = "https://lujein.app.n8n.cloud/webhook/triage-confirmation"
 
 def _normalize_key(name: str):
     return name.replace("_", "").replace(" ", "").lower()
@@ -49,12 +51,15 @@ def _extract_field(row: dict, candidate_names):
             return norm_map[_normalize_key(name)]
     return None
 
+# Explicit triage column name (no guessing)
+TRIAGE_COLUMN_NAME = "triage level"
+
 def _send_confirm(row: dict):
     if not CONFIRM_WEBHOOK_URL:
         return
     payload = {
         "patient_id": _extract_field(row, ["patient_id", "patient id", "id"]),
-        "ai_triage_level": _extract_field(row, ["ai_triage_level", "ai triage level", "triage", "esi", "esi_level", "triage_level"]),
+        "triage_level": row.get("triage level"),
     }
     try:
         requests.post(CONFIRM_WEBHOOK_URL, json=payload, timeout=5)
@@ -103,21 +108,41 @@ if data_store:
 
     # Render a lightweight table with a last-column button per row
     # Header
+    triage_col = TRIAGE_COLUMN_NAME if TRIAGE_COLUMN_NAME in df.columns else None
     header_cols = st.columns(len(df.columns) + 1)
     for i, col_name in enumerate(df.columns):
-        header_cols[i].markdown(f"**{col_name}**")
+        label = f"**{col_name}**" if col_name != triage_col else f"**{col_name}**"
+        header_cols[i].markdown(label)
     header_cols[-1].markdown("**Confirm?**")
 
     # Rows
     for idx, row in df.iterrows():
         row_cols = st.columns(len(df.columns) + 1)
         for i, col_name in enumerate(df.columns):
-            row_cols[i].write(row[col_name])
+            if col_name == triage_col:
+                # Editable triage level control
+                current_val = st.session_state["triage_override"].get(idx, row[col_name])
+                # Accept common ESI levels 1-5 as strings or ints
+                options = ["1", "2", "3", "3 - Vital Signs Needed", "4", "5"]
+                default_str = str(current_val) if current_val is not None else ""
+                selected = row_cols[i].selectbox(
+                    "",
+                    options,
+                    index=options.index(default_str) if default_str in options else 0,
+                    key=f"triage_sel_{idx}",
+                )
+                st.session_state["triage_override"][idx] = selected
+            else:
+                row_cols[i].write(row[col_name])
         label = "done" if idx in st.session_state["confirmed_rows"] else "✅"
         if row_cols[-1].button(label, key=f"row_action_{idx}"):
             if idx not in st.session_state["confirmed_rows"]:
-                # Send confirmation webhook once per row
-                _send_confirm(row.to_dict())
+                # Send confirmation webhook once per row, using override if present
+                row_dict = row.to_dict()
+                override = st.session_state["triage_override"].get(idx)
+                if override is not None and triage_col is not None:
+                    row_dict[triage_col] = override
+                _send_confirm(row_dict)
                 st.session_state["confirmed_rows"].append(idx)
             st.rerun()
 else:
