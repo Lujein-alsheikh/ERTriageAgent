@@ -49,7 +49,7 @@ def extract_patient_data(data):
 
 
 # ---- CONFIG ----
-API_URL = "https://lujein.app.n8n.cloud/webhook/reception"  
+API_URL = "https://lujein.app.n8n.cloud/webhook-test/reception"  
 
 st.set_page_config(page_title="ER Receptionist Prototype", page_icon="🏥", layout="centered")
 st.title("🏥 ER Receptionist Interface")
