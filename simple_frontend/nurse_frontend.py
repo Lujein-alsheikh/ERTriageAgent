@@ -4,6 +4,7 @@ import pandas as pd
 from fastapi import FastAPI, Request
 import uvicorn
 import time
+import requests
 
 # Must be the first Streamlit command
 st.set_page_config(page_title="Nurse Interface", page_icon="🚑", layout="centered")
@@ -21,6 +22,44 @@ def _noop(*args, **kwargs):
 # Track which rows have been confirmed (by index)
 if "confirmed_rows" not in st.session_state:
     st.session_state["confirmed_rows"] = []
+
+# --- Configuration for confirm webhook ---
+# Prefer setting in .streamlit/secrets.toml as:
+# [general]\nN8N_CONFIRM_WEBHOOK_URL = "https://..."
+# CONFIRM_WEBHOOK_URL = st.secrets.get("N8N_CONFIRM_WEBHOOK_URL", "")
+# if not CONFIRM_WEBHOOK_URL:
+    # Optional: allow hardcoding here if secrets not used
+CONFIRM_WEBHOOK_URL = "https://lujein.app.n8n.cloud/webhook-test/triage-confirmation"
+
+def _normalize_key(name: str):
+    return name.replace("_", "").replace(" ", "").lower()
+
+def _extract_field(row: dict, candidate_names):
+    # Try exact, case-insensitive, and normalized matches
+    for name in candidate_names:
+        if name in row:
+            return row.get(name)
+    lower_map = {k.lower(): v for k, v in row.items()}
+    for name in candidate_names:
+        if name.lower() in lower_map:
+            return lower_map[name.lower()]
+    norm_map = {_normalize_key(k): v for k, v in row.items()}
+    for name in candidate_names:
+        if _normalize_key(name) in norm_map:
+            return norm_map[_normalize_key(name)]
+    return None
+
+def _send_confirm(row: dict):
+    if not CONFIRM_WEBHOOK_URL:
+        return
+    payload = {
+        "patient_id": _extract_field(row, ["patient_id", "patient id", "id"]),
+        "ai_triage_level": _extract_field(row, ["ai_triage_level", "ai triage level", "triage", "esi", "esi_level", "triage_level"]),
+    }
+    try:
+        requests.post(CONFIRM_WEBHOOK_URL, json=payload, timeout=5)
+    except Exception:
+        pass
 
 # --- Shared in-memory storage (lives in shared_state) ---
 data_store = shared_state["data_store"]
@@ -77,6 +116,8 @@ if data_store:
         label = "done" if idx in st.session_state["confirmed_rows"] else "✅"
         if row_cols[-1].button(label, key=f"row_action_{idx}"):
             if idx not in st.session_state["confirmed_rows"]:
+                # Send confirmation webhook once per row
+                _send_confirm(row.to_dict())
                 st.session_state["confirmed_rows"].append(idx)
             st.rerun()
 else:
