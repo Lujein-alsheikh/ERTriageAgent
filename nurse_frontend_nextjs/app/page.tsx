@@ -157,8 +157,33 @@ export default function NurseInterface() {
             <tbody>
               {dataStore.map((row, idx) => {
                 const isConfirmed = confirmedRows.includes(idx);
-                const currentTriageValue =
-                  triageOverrides[idx] ?? row[TRIAGE_COLUMN_NAME] ?? "";
+                
+                // Get triage value, normalizing it to match options format
+                let rawTriageValue = triageOverrides[idx] ?? row[TRIAGE_COLUMN_NAME];
+                
+                // Convert to string and normalize (handle numbers, null, undefined)
+                let currentTriageValue = "";
+                if (rawTriageValue !== null && rawTriageValue !== undefined) {
+                  const strValue = String(rawTriageValue).trim();
+                  // Check if it matches any option exactly
+                  if (TRIAGE_OPTIONS.includes(strValue)) {
+                    currentTriageValue = strValue;
+                  } else {
+                    // Try to find a match by comparing as strings (handles "3" vs 3)
+                    const matchedOption = TRIAGE_OPTIONS.find(
+                      (opt) => String(opt) === strValue || String(opt).trim() === strValue
+                    );
+                    if (matchedOption) {
+                      currentTriageValue = matchedOption;
+                    } else {
+                      // If no match found, use the original string value
+                      // This way it won't default to "1" incorrectly
+                      currentTriageValue = strValue;
+                      // Add it as a temporary option if it's not already in the list
+                      // (This handles unexpected values gracefully)
+                    }
+                  }
+                }
 
                 return (
                   <tr
@@ -172,7 +197,7 @@ export default function NurseInterface() {
                       <td key={colIdx} style={{ padding: "12px" }}>
                         {colName === TRIAGE_COLUMN_NAME ? (
                           <select
-                            value={currentTriageValue}
+                            value={currentTriageValue || ""}
                             onChange={(e) =>
                               handleTriageChange(idx, e.target.value)
                             }
@@ -186,11 +211,21 @@ export default function NurseInterface() {
                               maxWidth: "200px",
                             }}
                           >
+                            {!currentTriageValue && (
+                              <option value="">Select...</option>
+                            )}
                             {TRIAGE_OPTIONS.map((option) => (
                               <option key={option} value={option}>
                                 {option}
                               </option>
                             ))}
+                            {/* If value doesn't match any option, add it */}
+                            {currentTriageValue &&
+                              !TRIAGE_OPTIONS.includes(currentTriageValue) && (
+                                <option value={currentTriageValue}>
+                                  {currentTriageValue}
+                                </option>
+                              )}
                           </select>
                         ) : (
                           <span>{String(row[colName] ?? "")}</span>
