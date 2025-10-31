@@ -51,7 +51,6 @@ def _extract_field(row: dict, candidate_names):
             return norm_map[_normalize_key(name)]
     return None
 
-# Explicit triage column name (no guessing)
 TRIAGE_COLUMN_NAME = "triage level"
 
 def _send_confirm(row: dict):
@@ -126,10 +125,11 @@ if data_store:
                 options = ["1", "2", "3", "3 - Vital Signs Needed", "4", "5"]
                 default_str = str(current_val) if current_val is not None else ""
                 selected = row_cols[i].selectbox(
-                    "",
+                    "Triage Level",  # Non-empty label for accessibility,
                     options,
                     index=options.index(default_str) if default_str in options else 0,
                     key=f"triage_sel_{idx}",
+                    label_visibility="collapsed",  # Hides the label in the UI
                 )
                 st.session_state["triage_override"][idx] = selected
             else:
