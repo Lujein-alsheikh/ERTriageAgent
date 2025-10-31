@@ -164,7 +164,7 @@ with col2:
         }
         # Show request acknowledgment immediately
         # st.success("✅ Simulated data requested! (sending…)")
-        st.session_state.setdefault("_notifications", []).append(("success", "✅ Simulated data requested!"))
+        # st.session_state.setdefault("_notifications", []).append(("success", "✅ Simulated data requested!"))
 
         try:
             response = requests.post(API_URL, json=empty_data)
@@ -184,7 +184,7 @@ with col2:
                 if patient_id:
                     print("patient id extracted!")
                     # st.success(f"✅ Received simulated patient data from n8n! (Status: {response.status_code})")
-                    st.session_state.setdefault("_notifications", []).append(("success", f"✅ Received simulated patient data from n8n! (Status: {response.status_code})"))
+                    # st.session_state.setdefault("_notifications", []).append(("success", f"✅ Received simulated patient data from n8n! (Status: {response.status_code})"))
                     # Defer populating fields until before widgets instantiate, then rerun so values appear
                     st.session_state["_pending_fill"] = parsed
                     st.rerun()
