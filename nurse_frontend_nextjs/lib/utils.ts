@@ -73,12 +73,31 @@ export async function sendConfirm(row: Record<string, any>): Promise<void> {
 }
 
 export const TRIAGE_COLUMN_NAME = "triage level";
-export const TRIAGE_OPTIONS = [
-  "1",
-  "2",
-  "3",
-  "3 - Vital Signs Needed",
-  "4",
-  "5",
-];
+export const TRIAGE_OPTIONS = ["1", "2", "3", "4", "5"];
+
+/**
+ * Extracts the triage level number (1-5) from any format
+ * Examples: "2" -> "2", "level 2" -> "2", "Level 2" -> "2", "3 - Vital Signs" -> "3"
+ */
+export function extractTriageNumber(value: any): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  const strValue = String(value).trim();
+
+  // Try direct match first (fast path)
+  if (TRIAGE_OPTIONS.includes(strValue)) {
+    return strValue;
+  }
+
+  // Extract number 1-5 from string using regex
+  const match = strValue.match(/\b([1-5])\b/);
+  if (match && match[1]) {
+    return match[1];
+  }
+
+  // If no number found, return empty string
+  return "";
+}
 

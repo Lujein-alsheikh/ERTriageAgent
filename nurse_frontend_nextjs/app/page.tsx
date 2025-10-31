@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TRIAGE_COLUMN_NAME, TRIAGE_OPTIONS } from "../lib/utils";
+import {
+  TRIAGE_COLUMN_NAME,
+  TRIAGE_OPTIONS,
+  extractTriageNumber,
+} from "../lib/utils";
 
 interface DataEntry {
   [key: string]: any;
@@ -158,32 +162,10 @@ export default function NurseInterface() {
               {dataStore.map((row, idx) => {
                 const isConfirmed = confirmedRows.includes(idx);
                 
-                // Get triage value, normalizing it to match options format
-                let rawTriageValue = triageOverrides[idx] ?? row[TRIAGE_COLUMN_NAME];
-                
-                // Convert to string and normalize (handle numbers, null, undefined)
-                let currentTriageValue = "";
-                if (rawTriageValue !== null && rawTriageValue !== undefined) {
-                  const strValue = String(rawTriageValue).trim();
-                  // Check if it matches any option exactly
-                  if (TRIAGE_OPTIONS.includes(strValue)) {
-                    currentTriageValue = strValue;
-                  } else {
-                    // Try to find a match by comparing as strings (handles "3" vs 3)
-                    const matchedOption = TRIAGE_OPTIONS.find(
-                      (opt) => String(opt) === strValue || String(opt).trim() === strValue
-                    );
-                    if (matchedOption) {
-                      currentTriageValue = matchedOption;
-                    } else {
-                      // If no match found, use the original string value
-                      // This way it won't default to "1" incorrectly
-                      currentTriageValue = strValue;
-                      // Add it as a temporary option if it's not already in the list
-                      // (This handles unexpected values gracefully)
-                    }
-                  }
-                }
+                // Get triage value and extract just the number (1-5)
+                const rawTriageValue =
+                  triageOverrides[idx] ?? row[TRIAGE_COLUMN_NAME];
+                const currentTriageValue = extractTriageNumber(rawTriageValue);
 
                 return (
                   <tr
@@ -197,7 +179,7 @@ export default function NurseInterface() {
                       <td key={colIdx} style={{ padding: "12px" }}>
                         {colName === TRIAGE_COLUMN_NAME ? (
                           <select
-                            value={currentTriageValue || ""}
+                            value={currentTriageValue || TRIAGE_OPTIONS[0]}
                             onChange={(e) =>
                               handleTriageChange(idx, e.target.value)
                             }
@@ -211,21 +193,11 @@ export default function NurseInterface() {
                               maxWidth: "200px",
                             }}
                           >
-                            {!currentTriageValue && (
-                              <option value="">Select...</option>
-                            )}
                             {TRIAGE_OPTIONS.map((option) => (
                               <option key={option} value={option}>
                                 {option}
                               </option>
                             ))}
-                            {/* If value doesn't match any option, add it */}
-                            {currentTriageValue &&
-                              !TRIAGE_OPTIONS.includes(currentTriageValue) && (
-                                <option value={currentTriageValue}>
-                                  {currentTriageValue}
-                                </option>
-                              )}
                           </select>
                         ) : (
                           <span>{String(row[colName] ?? "")}</span>
@@ -259,18 +231,6 @@ export default function NurseInterface() {
           </table>
         </div>
       )}
-
-      <div style={{ marginTop: "1rem", fontSize: "12px", color: "#666" }}>
-        Listening for data on <code>/api/data</code>
-        {process.env.NEXT_PUBLIC_VERCEL_URL && (
-          <div>
-            API endpoint:{" "}
-            <code>
-              {process.env.NEXT_PUBLIC_VERCEL_URL}/api/data
-            </code>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
