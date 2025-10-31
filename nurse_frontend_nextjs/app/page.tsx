@@ -172,7 +172,8 @@ export default function NurseInterface() {
                     key={idx}
                     style={{
                       borderBottom: "1px solid #eee",
-                      backgroundColor: isConfirmed ? "#f0f0f0" : "white",
+                      backgroundColor: isConfirmed ? "#e0e0e0" : "white",
+                      transition: "background-color 0.5s ease-in-out",
                     }}
                   >
                     {columns.map((colName, colIdx) => (
