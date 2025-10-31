@@ -14,6 +14,7 @@ interface DataEntry {
 export default function NurseInterface() {
   const [dataStore, setDataStore] = useState<DataEntry[]>([]);
   const [confirmedRows, setConfirmedRows] = useState<number[]>([]);
+  const [clearedRows, setClearedRows] = useState<number[]>([]); // Rows hidden from display
   const [triageOverrides, setTriageOverrides] = useState<
     Record<number, string>
   >({});
@@ -89,6 +90,30 @@ export default function NurseInterface() {
     }
   };
 
+  // Handle clear confirmed records (frontend only - removes from display)
+  const handleClearConfirmed = () => {
+    if (confirmedRows.length === 0) {
+      return;
+    }
+
+    if (!confirm("Are you sure you want to remove all confirmed records from the display?")) {
+      return;
+    }
+
+    // Add confirmed rows to clearedRows (which will hide them)
+    setClearedRows((prev) => [...prev, ...confirmedRows]);
+    
+    // Clear confirmed state
+    setConfirmedRows([]);
+    
+    // Clean up triage overrides for cleared rows
+    const newOverrides = { ...triageOverrides };
+    confirmedRows.forEach((idx) => {
+      delete newOverrides[idx];
+    });
+    setTriageOverrides(newOverrides);
+  };
+
   // Get all column names from data
   const getColumns = (): string[] => {
     if (dataStore.length === 0) return [];
@@ -102,8 +127,11 @@ export default function NurseInterface() {
   const columns = getColumns();
 
   // Sort by arrival time: newest first (reverse order since new items are appended)
+  // Filter out cleared rows from display (confirmed rows should still show as grey until cleared)
   // Create array with index to track original position
-  const dataWithIndex = dataStore.map((row, idx) => ({ row, originalIdx: idx }));
+  const dataWithIndex = dataStore
+    .map((row, idx) => ({ row, originalIdx: idx }))
+    .filter((item) => !clearedRows.includes(item.originalIdx)); // Only filter out cleared rows
   const sortedDataWithIndex = dataWithIndex.sort((a, b) => {
     // Newer arrivals (higher index) come first
     return b.originalIdx - a.originalIdx;
@@ -115,9 +143,33 @@ export default function NurseInterface() {
 
   return (
     <div style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
-      <h1 style={{ fontSize: "2rem", marginBottom: "2rem" }}>
-        🚑 Nurse Interface
-      </h1>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "2rem",
+        }}
+      >
+        <h1 style={{ fontSize: "2rem", margin: 0 }}>🚑 Nurse Interface</h1>
+        {confirmedRows.length > 0 && (
+          <button
+            onClick={handleClearConfirmed}
+            style={{
+              padding: "10px 20px",
+              borderRadius: "4px",
+              border: "none",
+              backgroundColor: "#f44336",
+              color: "white",
+              cursor: "pointer",
+              fontSize: "14px",
+              fontWeight: "600",
+            }}
+          >
+            Clear Confirmed ({confirmedRows.length})
+          </button>
+        )}
+      </div>
 
       {dataStore.length === 0 ? (
         <div
