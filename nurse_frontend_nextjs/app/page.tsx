@@ -100,9 +100,18 @@ export default function NurseInterface() {
   };
 
   const columns = getColumns();
-  const triageColIndex = columns.findIndex(
-    (col) => col === TRIAGE_COLUMN_NAME
-  );
+
+  // Sort by arrival time: newest first (reverse order since new items are appended)
+  // Create array with index to track original position
+  const dataWithIndex = dataStore.map((row, idx) => ({ row, originalIdx: idx }));
+  const sortedDataWithIndex = dataWithIndex.sort((a, b) => {
+    // Newer arrivals (higher index) come first
+    return b.originalIdx - a.originalIdx;
+  });
+
+  // Extract sorted rows and mapping
+  const sortedData = sortedDataWithIndex.map((item) => item.row);
+  const sortedToOriginal = sortedDataWithIndex.map((item) => item.originalIdx);
 
   return (
     <div style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
@@ -159,17 +168,19 @@ export default function NurseInterface() {
               </tr>
             </thead>
             <tbody>
-              {dataStore.map((row, idx) => {
-                const isConfirmed = confirmedRows.includes(idx);
+              {sortedData.map((row, displayIdx) => {
+                // Map display index back to original index
+                const originalIdx = sortedToOriginal[displayIdx];
+                const isConfirmed = confirmedRows.includes(originalIdx);
                 
                 // Get triage value and extract just the number (1-5)
                 const rawTriageValue =
-                  triageOverrides[idx] ?? row[TRIAGE_COLUMN_NAME];
+                  triageOverrides[originalIdx] ?? row[TRIAGE_COLUMN_NAME];
                 const currentTriageValue = extractTriageNumber(rawTriageValue);
 
                 return (
                   <tr
-                    key={idx}
+                    key={originalIdx}
                     style={{
                       borderBottom: "1px solid #eee",
                       backgroundColor: isConfirmed ? "#e0e0e0" : "white",
@@ -182,7 +193,7 @@ export default function NurseInterface() {
                           <select
                             value={currentTriageValue || TRIAGE_OPTIONS[0]}
                             onChange={(e) =>
-                              handleTriageChange(idx, e.target.value)
+                              handleTriageChange(originalIdx, e.target.value)
                             }
                             disabled={isConfirmed}
                             style={{
@@ -207,7 +218,7 @@ export default function NurseInterface() {
                     ))}
                     <td style={{ padding: "12px" }}>
                       <button
-                        onClick={() => handleConfirm(idx)}
+                        onClick={() => handleConfirm(originalIdx)}
                         disabled={isConfirmed || loading}
                         style={{
                           padding: "8px 16px",
