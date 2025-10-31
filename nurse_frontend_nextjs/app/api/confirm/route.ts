@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendConfirm } from "@/lib/utils";
+import { sendConfirm } from "../../../lib/utils";
 
 export async function POST(request: NextRequest) {
   try {

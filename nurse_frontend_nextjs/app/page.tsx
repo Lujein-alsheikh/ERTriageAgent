@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TRIAGE_COLUMN_NAME, TRIAGE_OPTIONS } from "@/lib/utils";
+import { TRIAGE_COLUMN_NAME, TRIAGE_OPTIONS } from "../lib/utils";
 
 interface DataEntry {
   [key: string]: any;

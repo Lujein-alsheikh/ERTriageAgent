@@ -36,8 +36,15 @@ The app will be available at `http://localhost:3000`
 
 1. Push your code to GitHub/GitLab/Bitbucket
 2. Import the project in Vercel
-3. Set the environment variable `N8N_CONFIRM_WEBHOOK_URL` in Vercel dashboard
-4. Deploy!
+3. **Important**: Since this Next.js app is in a subdirectory (`nurse_frontend_nextjs`), configure Vercel:
+   - Go to **Project Settings → General**
+   - Under **Root Directory**, click **Edit** and select `nurse_frontend_nextjs`
+   - Or when importing, select **"Configure Project"** and set:
+     - **Root Directory**: `nurse_frontend_nextjs`
+     - **Framework Preset**: Next.js (should auto-detect)
+     - **Build Command**: `npm install && npm run build` (or leave default)
+4. Set the environment variable `N8N_CONFIRM_WEBHOOK_URL` in Vercel dashboard (Settings → Environment Variables)
+5. Deploy!
 
 ## API Endpoints
 
