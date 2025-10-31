@@ -9,8 +9,10 @@ import ast
 
 def extract_patient_data(data):
     """
-    Parses the specific n8n output format like:
+    Parses the specific n8n output formats like:
     [{'output': '[{\'output\': \'{\\n  "patient_id": 123456, ... }\'}]'}]
+    or
+    [{'output': '{\n  "patient_id": "er_0001",\n  "age": 0,\n ...\n}'}]
 
     Returns a clean Python dict, e.g.:
     {'patient_id': 123456, 'age': 29, ...}
